@@ -1,0 +1,42 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function me() { return request.auth.uid; }
+
+    // Public player profiles (name, avatar, xp, friend code) for the leaderboard.
+    match /users/{uid} {
+      allow read: if signedIn();
+      allow create, update: if signedIn() && me() == uid
+        && request.resource.data.name is string
+        && request.resource.data.name.size() <= 24
+        && request.resource.data.xp is int;
+      allow delete: if signedIn() && me() == uid;
+
+      // Friend lists. Either side of a friendship can write the link
+      // (the person accepting a request writes both sides).
+      match /friends/{fid} {
+        allow read: if signedIn() && me() == uid;
+        allow write: if signedIn() && (me() == uid || me() == fid);
+      }
+    }
+
+    match /friendRequests/{id} {
+      allow read: if signedIn() && (resource.data.from == me() || resource.data.to == me());
+      allow create: if signedIn() && request.resource.data.from == me()
+        && request.resource.data.status == 'pending';
+      allow update: if signedIn() && resource.data.to == me();
+      allow delete: if signedIn() && (resource.data.from == me() || resource.data.to == me());
+    }
+
+    match /challenges/{id} {
+      allow read: if signedIn() && (resource.data.from == me() || resource.data.to == me());
+      allow create: if signedIn() && request.resource.data.from == me();
+      // Only the challenged player can fill in their score.
+      allow update: if signedIn() && resource.data.to == me()
+        && request.resource.data.from == resource.data.from
+        && request.resource.data.fromScore == resource.data.fromScore;
+      allow delete: if signedIn() && (resource.data.from == me() || resource.data.to == me());
+    }
+  }
+}
