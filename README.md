@@ -29,6 +29,28 @@ Plus: **Cell Explorer** (tap any part of a cell to learn about it), a Cell Libra
 
 Animations include a 3-2-1-GO countdown, "Great job!" / "Not quite!" pop-ups, combo flames, "Streak lost!", level-up, badge unlocks, confetti and a "Try again" screen. All sounds are generated in the browser (no audio files), and can be muted.
 
+## Install it like an app
+
+Cell Quest is an installable web app (PWA):
+
+- **Android / Chrome / Edge:** open the site and tap **Install** (on the home page or in **Me → Settings**), or use the browser menu → *Install app*.
+- **iPhone / iPad:** open the site in Safari → **Share** → **Add to Home Screen**.
+
+Once installed it opens full-screen, works offline (online features excepted), has its own icon with shortcuts (Daily Challenge, Quick Quiz, Friends), and shows an **Update** banner when a new version is published, so a game is never interrupted.
+
+## Notifications
+
+Turn them on in **Me → Settings → Notifications**. Players get alerts for new friend requests, duel challenges and duel results, plus an evening reminder to keep their daily streak. The installed app icon shows a number badge for pending requests.
+
+Alerts arrive while Cell Quest is open (including in a background tab or minimised). On Android/Chrome, the installed app can also show the daily streak reminder when closed. Alerts that arrive while the app is fully closed would need Firebase's paid Blaze plan plus a server function, which isn't set up.
+
+## Teacher classes
+
+Under **Classes** (or **Friends → Classes** on phones):
+
+- **Teachers** create a class and get a 6-character join code. The live dashboard shows each student's XP, rank, rounds, accuracy, streaks and last activity, plus the class's **most-missed questions**. It can be downloaded as a spreadsheet (CSV).
+- **Students** enter the code to join. They are told that the teacher will see their name, progress and missed questions.
+
 ## Editing questions (no coding needed)
 
 - **All questions:** [`src/data/questions.js`](src/data/questions.js)
@@ -55,9 +77,11 @@ Then open the link it prints (usually http://localhost:5173).
 2. In the GitHub repo go to **Settings → Pages → Build and deployment → Source** and choose **GitHub Actions**.
 3. The workflow in `.github/workflows/deploy.yml` builds and publishes the site on every push. The address will be `https://<username>.github.io/<repo-name>/`.
 
-## Turn on online features (Firebase)
+## Online features (Firebase)
 
-Without Firebase, everything works except Friends, Challenges and the Leaderboard.
+Online features are already connected to the Firebase project **cell-quest-0**; its web config is in `src/lib/firebase.js`. **Whenever `firestore.rules` changes, paste the new version into Firebase → Firestore Database → Rules and click Publish.**
+
+To use a different Firebase project instead:
 
 1. Go to [console.firebase.google.com](https://console.firebase.google.com), create a project, then **Add app → Web**. Copy the config values it shows.
 2. **Authentication → Sign-in method:** enable **Google** and **Anonymous**.
@@ -86,8 +110,9 @@ src/
   game/         modes, scoring, progress/streaks/badges, sound, voice
   questions/    one component per question type
   components/   quiz engine, animations, layout
-  pages/        Home, Play, Learn, Mistakes, Friends, Profile
-  lib/          Firebase + friends/challenges
+  pages/        Home, Play, Learn, Mistakes, Friends, Classes, Profile
+  lib/          Firebase (friends, challenges, classes) + app/notification helpers
+  sw.js         service worker (offline, notifications, streak reminder)
 ```
 
 ## Notes
