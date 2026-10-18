@@ -28,7 +28,7 @@ function SetupNeeded() {
 }
 
 // Turn Firebase error codes into plain English.
-function friendlyAuthError(msg) {
+export function friendlyAuthError(msg) {
   if (msg.includes('popup-closed-by-user') || msg.includes('cancelled-popup-request')) return 'Sign-in window was closed. Try again!';
   if (msg.includes('popup-blocked')) return 'Your browser blocked the sign-in window. Allow pop-ups for this site and try again.';
   if (msg.includes('unauthorized-domain')) return 'This website isn’t allowed to sign in yet (site owner: add it under Firebase → Authentication → Settings → Authorized domains).';

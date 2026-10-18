@@ -10,6 +10,7 @@ import { Squiggle } from '../art/Decor.jsx';
 import { useSocial } from '../lib/social.jsx';
 import { rankFor } from '../game/progress.jsx';
 import { exists, summary } from '../game/catalog.js';
+import { friendlyAuthError } from './Friends.jsx';
 
 const ago = (ts) => {
   if (!ts?.seconds) return '—';
@@ -171,7 +172,7 @@ export default function Classes() {
       </h1>
       {social.error && (
         <p className="error-msg" role="alert">
-          {social.error} <button className="link" onClick={social.clearError}>Dismiss</button>
+          {friendlyAuthError(social.error)} <button className="link" onClick={social.clearError}>Dismiss</button>
         </p>
       )}
       {note && <p className="note-msg">{note}</p>}
