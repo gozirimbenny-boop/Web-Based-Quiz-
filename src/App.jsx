@@ -9,6 +9,7 @@ import Learn from './pages/Learn.jsx';
 import Mistakes from './pages/Mistakes.jsx';
 import Friends from './pages/Friends.jsx';
 import Profile from './pages/Profile.jsx';
+import Classes from './pages/Classes.jsx';
 
 // HashRouter: URLs look like /#/play/sprint, which works on GitHub Pages
 // without any server-side routing.
@@ -27,6 +28,7 @@ export default function App() {
               <Route path="mistakes" element={<Mistakes />} />
               <Route path="friends" element={<Friends />} />
               <Route path="profile" element={<Profile />} />
+              <Route path="classes" element={<Classes />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>

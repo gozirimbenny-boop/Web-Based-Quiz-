@@ -3,6 +3,9 @@ service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
     function me() { return request.auth.uid; }
+    function teaches(cid) {
+      return get(/databases/$(database)/documents/classes/$(cid)).data.teacher == me();
+    }
 
     // Public player profiles (name, avatar, xp, friend code) for the leaderboard.
     match /users/{uid} {
@@ -37,6 +40,29 @@ service cloud.firestore {
         && request.resource.data.from == resource.data.from
         && request.resource.data.fromScore == resource.data.fromScore;
       allow delete: if signedIn() && (resource.data.from == me() || resource.data.to == me());
+    }
+
+    // Teacher classes. Anyone signed in can look a class up by its join code;
+    // only the teacher can change or delete it.
+    match /classes/{cid} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.teacher == me()
+        && request.resource.data.name is string
+        && request.resource.data.name.size() <= 40
+        && request.resource.data.code is string
+        && request.resource.data.code.size() == 6;
+      allow update: if signedIn() && resource.data.teacher == me()
+        && request.resource.data.teacher == me();
+      allow delete: if signedIn() && resource.data.teacher == me();
+
+      // One entry per student with their progress. Students write their own;
+      // only the student and the class teacher can read it.
+      match /members/{uid} {
+        allow read: if signedIn() && (me() == uid || teaches(cid));
+        allow create, update: if signedIn() && me() == uid
+          && exists(/databases/$(database)/documents/classes/$(cid));
+        allow delete: if signedIn() && (me() == uid || teaches(cid));
+      }
     }
   }
 }

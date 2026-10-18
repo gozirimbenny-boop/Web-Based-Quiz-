@@ -152,6 +152,15 @@ export default function Friends() {
         </button>
       </div>
 
+      <Link to="/classes" className="card class-link">
+        <OrganelleIcon id="nucleus" size={40} />
+        <span className="grow">
+          <strong>Classes</strong>
+          <span className="muted small"> — join your teacher’s class, or create one if you teach</span>
+        </span>
+        <span aria-hidden="true">→</span>
+      </Link>
+
       {social.error && (
         <p className="error-msg" role="alert">
           {friendlyAuthError(social.error)} <button className="link" onClick={social.clearError}>Dismiss</button>

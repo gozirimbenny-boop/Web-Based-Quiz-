@@ -59,6 +59,7 @@ const DEFAULT = {
   mistakes: [],
   history: [],
   muted: false,
+  notify: false,
   seenIntro: false,
 };
 

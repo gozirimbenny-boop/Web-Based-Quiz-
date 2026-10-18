@@ -9,6 +9,7 @@ import CellDiagram from '../art/CellDiagram.jsx';
 import { Flame, RankBadge } from '../art/Icons.jsx';
 import { BlobBuddy, BlobFrame, BunnyBuddy, CloudEdge, CurlyArrow, FlowerFrame, LoopArrow, Sparks, Squiggle } from '../art/Decor.jsx';
 import { StreakLostOverlay } from '../components/Effects.jsx';
+import { InstallCard } from '../components/AppSettings.jsx';
 import { BADGES, useProgress } from '../game/progress.jsx';
 import { MODES, MODE_BY_ID } from '../game/modes.js';
 import { todayKey } from '../game/rng.js';
@@ -139,6 +140,10 @@ export default function Home() {
           <span>Day streak</span>
         </div>
       </section>
+
+      <div className="install-wrap">
+        <InstallCard />
+      </div>
 
       {/* ---------- Learning through play ---------- */}
       <section className="split">

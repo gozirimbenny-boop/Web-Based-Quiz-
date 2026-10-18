@@ -2,6 +2,7 @@ import { useState } from 'react';
 import OrganelleIcon from '../art/OrganelleIcon.jsx';
 import { RankBadge } from '../art/Icons.jsx';
 import { FlowerFrame } from '../art/Decor.jsx';
+import { InstallCard, NotificationSetting } from '../components/AppSettings.jsx';
 import { BADGES, RANKS, useProgress } from '../game/progress.jsx';
 import { AvatarPicker } from './Home.jsx';
 
@@ -89,6 +90,8 @@ export default function Profile() {
 
       <section className="card">
         <h3>Settings</h3>
+        <InstallCard compact />
+        <NotificationSetting />
         <label className="toggle">
           <input type="checkbox" checked={!p.muted} onChange={(e) => p.update({ muted: !e.target.checked })} /> Sound effects
         </label>

@@ -626,6 +626,42 @@ button { font: inherit; color: inherit; }
 @keyframes slideL { from { opacity: 0; transform: translateX(60px) rotate(0deg); } }
 @keyframes slideR { from { opacity: 0; transform: translateX(-60px) rotate(0deg); } }
 
+/* ---------- app: install, alerts, notifications ---------- */
+.install-wrap { max-width: 1000px; margin: 10px auto 0; padding: 0 16px; }
+.install-wrap:empty { display: none; }
+.install-card { display: flex; align-items: center; gap: 14px; border: 2px dashed var(--coral); background: #fff8f2; }
+.install-card.compact { box-shadow: none; }
+.install-card strong { display: block; color: var(--ink); }
+.install-icon { border-radius: 14px; flex-shrink: 0; }
+.ios-steps { margin: 6px 0 0; padding-left: 18px; }
+.notify-setting { margin: 6px 0 14px; }
+.notify-setting .org-icon { vertical-align: middle; }
+.toasts.alerts { top: auto; bottom: 90px; }
+.app.in-game .toasts.alerts { bottom: 16px; }
+.alert-toast, .update-toast { pointer-events: auto; border-color: var(--coral); animation: toastIn 0.5s cubic-bezier(.2, 1.4, .4, 1); }
+.alert-toast { animation: toastIn 0.5s cubic-bezier(.2, 1.4, .4, 1), toastOut 0.5s 7.5s forwards; }
+.alert-toast strong, .update-toast strong { color: var(--ink); }
+.update-toast { border-color: var(--green); }
+
+/* ---------- classes ---------- */
+.class-link { display: flex; align-items: center; gap: 12px; transition: transform 0.15s; }
+.class-link:hover { transform: translateY(-2px); border-color: var(--coral); }
+.class-link strong { color: var(--ink); }
+.note-msg { background: var(--good-bg); color: var(--good); padding: 10px 14px; border-radius: 12px; font-weight: 700; }
+.class-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.class-head h3 { margin: 0; }
+.dashboard { margin-top: 16px; }
+.dash-title { margin-top: 22px; }
+.table-wrap { overflow-x: auto; margin-bottom: 12px; border-radius: 14px; border: 1px solid var(--line); }
+.class-table { width: 100%; border-collapse: collapse; font-size: 0.92rem; min-width: 640px; }
+.class-table th { text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); background: var(--cream); padding: 10px; }
+.class-table td { padding: 8px 10px; border-top: 1px solid var(--line); }
+.class-table tbody tr:hover { background: #fffbea; }
+.student { display: flex; align-items: center; gap: 8px; }
+.student span { display: flex; flex-direction: column; line-height: 1.2; }
+.student strong { color: var(--ink); }
+.student small { color: var(--muted); }
+
 /* ---------- responsive ---------- */
 @media (max-width: 900px) {
   .topnav { display: none; }

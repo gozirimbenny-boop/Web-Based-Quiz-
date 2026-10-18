@@ -3,6 +3,7 @@ import { useProgress } from '../game/progress.jsx';
 import { useSocial } from '../lib/social.jsx';
 import OrganelleIcon from '../art/OrganelleIcon.jsx';
 import { Flame, Speaker, Star } from '../art/Icons.jsx';
+import Alerts from './Alerts.jsx';
 
 const NAV = [
   { to: '/', label: 'Home', icon: 'nucleus', end: true },
@@ -11,6 +12,8 @@ const NAV = [
   { to: '/friends', label: 'Friends', icon: 'vesicle' },
   { to: '/profile', label: 'Me', icon: 'ribosome' },
 ];
+// Desktop top menu also shows Classes (on phones it's reached from Friends).
+const TOP_NAV = [...NAV.slice(1, 4), { to: '/classes', label: 'Classes' }, NAV[4]];
 
 export default function Layout() {
   const p = useProgress();
@@ -27,7 +30,7 @@ export default function Layout() {
             Cell Quest
           </Link>
           <nav className="topnav" aria-label="Main">
-            {NAV.slice(1).map((n) => (
+            {TOP_NAV.map((n) => (
               <NavLink key={n.to} to={n.to} className={({ isActive }) => (isActive ? 'active' : '')}>
                 {n.label}
                 {n.to === '/friends' && pending > 0 && <span className="dot">{pending}</span>}
@@ -59,6 +62,7 @@ export default function Layout() {
       <main className="main">
         <Outlet />
       </main>
+      <Alerts />
 
       {!inGame && (
         <footer className="footer">
