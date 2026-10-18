@@ -27,6 +27,17 @@ function SetupNeeded() {
   );
 }
 
+// Turn Firebase error codes into plain English.
+function friendlyAuthError(msg) {
+  if (msg.includes('popup-closed-by-user') || msg.includes('cancelled-popup-request')) return 'Sign-in window was closed. Try again!';
+  if (msg.includes('popup-blocked')) return 'Your browser blocked the sign-in window. Allow pop-ups for this site and try again.';
+  if (msg.includes('unauthorized-domain')) return 'This website isn’t allowed to sign in yet (site owner: add it under Firebase → Authentication → Settings → Authorized domains).';
+  if (msg.includes('admin-restricted-operation') || msg.includes('operation-not-allowed'))
+    return 'This sign-in method isn’t switched on yet (site owner: enable it under Firebase → Authentication → Sign-in method).';
+  if (msg.includes('network-request-failed')) return 'No internet connection. Check your connection and try again.';
+  return msg;
+}
+
 function SignIn() {
   const social = useSocial();
   const p = useProgress();
@@ -52,6 +63,11 @@ function SignIn() {
         Play as guest
       </button>
       <p className="muted small">Guest accounts stay on this device only. Use Google to keep your progress across devices.</p>
+      {social.error && (
+        <p className="error-msg" role="alert">
+          {friendlyAuthError(social.error)}
+        </p>
+      )}
     </div>
   );
 }
