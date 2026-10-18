@@ -39,7 +39,9 @@ function readAloudText(q) {
   return q.prompt;
 }
 
-export default function QuizRunner({ mode, questions, onFinish, onReplay, extraResults }) {
+// onAnswerLog(entry, allAnswers): called after every answer (assignments save
+// progress with it). entry.ms is how long the answer took.
+export default function QuizRunner({ mode, questions, onFinish, onReplay, onAnswerLog, extraResults, secure = false }) {
   const progress = useProgress();
   const [phase, setPhase] = useState('countdown'); // countdown | play | results
   const [idx, setIdx] = useState(0);
@@ -54,6 +56,11 @@ export default function QuizRunner({ mode, questions, onFinish, onReplay, extraR
   const [showLevelUp, setShowLevelUp] = useState(false);
   const burstKey = useRef(0);
   const finished = useRef(false);
+  const shownAt = useRef(0); // when the current question appeared
+
+  useEffect(() => {
+    if (phase === 'play') shownAt.current = Date.now();
+  }, [phase, idx]);
 
   const q = questions[idx];
   const answered = !!current;
@@ -91,7 +98,7 @@ export default function QuizRunner({ mode, questions, onFinish, onReplay, extraR
       setOutcome({ ...result, score, max, pct });
       setPhase('results');
       if (result.levelUp) setTimeout(() => setShowLevelUp(true), 1600);
-      onFinish?.({ score, max });
+      onFinish?.({ score, max, answers: finalAnswers });
     },
     [mode.id, onFinish, progress],
   );
@@ -99,10 +106,11 @@ export default function QuizRunner({ mode, questions, onFinish, onReplay, extraR
   const handleAnswer = useCallback(
     (res) => {
       if (current || finished.current) return;
-      const entry = { id: q.id, ...res };
+      const entry = { id: q.id, kind: q.kind, ms: Date.now() - shownAt.current, ...res };
       setCurrent(entry);
       const next = [...answers, entry];
       setAnswers(next);
+      onAnswerLog?.(entry, next);
       if (res.correct) {
         const c = combo + 1;
         setCombo(c);
@@ -131,7 +139,7 @@ export default function QuizRunner({ mode, questions, onFinish, onReplay, extraR
         setCombo(0);
       }
     },
-    [answers, combo, current, q],
+    [answers, combo, current, q, onAnswerLog],
   );
 
   const goNext = useCallback(() => {
@@ -231,7 +239,7 @@ export default function QuizRunner({ mode, questions, onFinish, onReplay, extraR
   const timerPct = mode.timePer ? (qTime / mode.timePer) * 100 : 0;
 
   return (
-    <div className="quiz">
+    <div className={`quiz ${secure ? 'secure' : ''}`}>
       {phase === 'countdown' && <Countdown title={mode.name} onDone={startCountdown} />}
 
       <div className="quiz-hud">
@@ -385,14 +393,16 @@ function Results({ outcome, answers, questions, bestCombo, showLevelUp, closeLev
 
       {extra}
 
-      <div className="row center gap wrap">
-        <button className={`btn primary big ${tier === 'lose' ? 'pulse' : ''}`} onClick={onReplay}>
-          {tier === 'lose' ? 'Try again' : 'Play again'}
-        </button>
-        <Link className="btn ghost big" to="/play">
-          Other games
-        </Link>
-      </div>
+      {onReplay && (
+        <div className="row center gap wrap">
+          <button className={`btn primary big ${tier === 'lose' ? 'pulse' : ''}`} onClick={onReplay}>
+            {tier === 'lose' ? 'Try again' : 'Play again'}
+          </button>
+          <Link className="btn ghost big" to="/play">
+            Other games
+          </Link>
+        </div>
+      )}
 
       {missed.length > 0 && (
         <section className="review">

@@ -6,6 +6,9 @@ service cloud.firestore {
     function teaches(cid) {
       return get(/databases/$(database)/documents/classes/$(cid)).data.teacher == me();
     }
+    function inClass(cid) {
+      return exists(/databases/$(database)/documents/classes/$(cid)/members/$(request.auth.uid));
+    }
 
     // Public player profiles (name, avatar, xp, friend code) for the leaderboard.
     match /users/{uid} {
@@ -62,6 +65,30 @@ service cloud.firestore {
         allow create, update: if signedIn() && me() == uid
           && exists(/databases/$(database)/documents/classes/$(cid));
         allow delete: if signedIn() && (me() == uid || teaches(cid));
+      }
+
+      // Assignments: the teacher sets them; class members can read them.
+      // Each student writes only their own submission.
+      match /assignments/{aid} {
+        allow read: if signedIn() && (teaches(cid) || inClass(cid));
+        allow write: if signedIn() && teaches(cid);
+        match /submissions/{uid} {
+          allow read: if signedIn() && (me() == uid || teaches(cid));
+          allow create, update: if signedIn() && me() == uid && inClass(cid);
+          allow delete: if signedIn() && teaches(cid);
+        }
+      }
+
+      // Live rooms: the teacher runs the room; players see each other's
+      // scores (leaderboard) but each writes only their own entry.
+      match /rooms/{rid} {
+        allow read: if signedIn() && (teaches(cid) || inClass(cid));
+        allow write: if signedIn() && teaches(cid);
+        match /players/{uid} {
+          allow read: if signedIn() && (teaches(cid) || inClass(cid));
+          allow create, update: if signedIn() && me() == uid && inClass(cid);
+          allow delete: if signedIn() && teaches(cid);
+        }
       }
     }
   }

@@ -169,6 +169,62 @@ export function SocialProvider({ children }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fb, user, classIds, statsKey]);
 
+  // Student side: assignments and live rooms in my classes, plus my own
+  // submission for each assignment (for "to do" / "done" status).
+  const [assignments, setAssignments] = useState([]);
+  const [liveRooms, setLiveRooms] = useState([]);
+  const [mySubs, setMySubs] = useState({});
+  useEffect(() => {
+    if (!fb || !user || !classes.length) {
+      setAssignments([]);
+      setLiveRooms([]);
+      return undefined;
+    }
+    const { collection, onSnapshot } = fb.fsMod;
+    const byClass = { assignments: {}, rooms: {} };
+    const flush = () => {
+      setAssignments(Object.values(byClass.assignments).flat().sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)));
+      setLiveRooms(Object.values(byClass.rooms).flat());
+    };
+    const unsubs = classes.flatMap((c) => [
+      onSnapshot(
+        collection(fb.db, 'classes', c.id, 'assignments'),
+        (s) => {
+          byClass.assignments[c.id] = s.docs.map((d) => ({ id: d.id, cid: c.id, className: c.name, ...d.data() }));
+          flush();
+        },
+        () => {},
+      ),
+      onSnapshot(
+        collection(fb.db, 'classes', c.id, 'rooms'),
+        (s) => {
+          byClass.rooms[c.id] = s.docs.map((d) => ({ id: d.id, cid: c.id, className: c.name, ...d.data() })).filter((r) => r.state !== 'ended');
+          flush();
+        },
+        () => {},
+      ),
+    ]);
+    return () => unsubs.forEach((u) => u());
+  }, [fb, user, classes]);
+
+  const assignmentKey = assignments.map((a) => `${a.cid}/${a.id}`).join(',');
+  useEffect(() => {
+    if (!fb || !user || !assignments.length) {
+      setMySubs({});
+      return undefined;
+    }
+    const { doc, onSnapshot } = fb.fsMod;
+    const unsubs = assignments.map((a) =>
+      onSnapshot(
+        doc(fb.db, 'classes', a.cid, 'assignments', a.id, 'submissions', user.uid),
+        (s) => setMySubs((m) => ({ ...m, [a.id]: s.exists() ? s.data() : null })),
+        () => {},
+      ),
+    );
+    return () => unsubs.forEach((u) => u());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fb, user, assignmentKey]);
+
   // A clean slate after signing in or out (e.g. drop a stale popup error).
   useEffect(() => setError(''), [user]);
 
@@ -325,6 +381,92 @@ export function SocialProvider({ children }) {
 
       removeMember: (cid, uid) => run(({ db, fsMod: { doc, deleteDoc } }) => deleteDoc(doc(db, 'classes', cid, 'members', uid))),
 
+      // ---------- Assignments ----------
+      assignments,
+      mySubs,
+
+      // Live listener on any doc or collection path; returns unsubscribe.
+      watch: (path, cb) => {
+        if (!fb) return () => {};
+        const { collection, doc, onSnapshot } = fb.fsMod;
+        const isDoc = path.length % 2 === 0;
+        const ref = isDoc ? doc(fb.db, ...path) : collection(fb.db, ...path);
+        return onSnapshot(
+          ref,
+          (s) => cb(isDoc ? (s.exists() ? { id: s.id, ...s.data() } : null) : s.docs.map((d) => ({ id: d.id, ...d.data() }))),
+          (e) => setError(e.message),
+        );
+      },
+
+      createAssignment: (cid, data) =>
+        run(async ({ db, fsMod: { collection, addDoc, serverTimestamp } }) => {
+          const ref = await addDoc(collection(db, 'classes', cid, 'assignments'), { ...data, status: 'open', createdAt: serverTimestamp() });
+          return ref.id;
+        }),
+
+      updateAssignment: (cid, aid, patch) => run(({ db, fsMod: { doc, updateDoc } }) => updateDoc(doc(db, 'classes', cid, 'assignments', aid), patch)),
+
+      deleteAssignment: (cid, aid) =>
+        run(async ({ db, fsMod: { collection, doc, getDocs, deleteDoc } }) => {
+          const subs = await getDocs(collection(db, 'classes', cid, 'assignments', aid, 'submissions'));
+          await Promise.all(subs.docs.map((s) => deleteDoc(s.ref)));
+          await deleteDoc(doc(db, 'classes', cid, 'assignments', aid));
+          return true;
+        }),
+
+      // Students save their own submission (merged, so it can be saved
+      // after every answer and the teacher sees progress live).
+      saveSubmission: (cid, aid, data) =>
+        run(({ db, fsMod: { doc, setDoc, serverTimestamp } }) =>
+          setDoc(
+            doc(db, 'classes', cid, 'assignments', aid, 'submissions', user.uid),
+            { name: progress.name.slice(0, 24), avatar: progress.avatar, ...data, updatedAt: serverTimestamp() },
+            { merge: true },
+          ),
+        ),
+
+      resetSubmission: (cid, aid, uid) => run(({ db, fsMod: { doc, deleteDoc } }) => deleteDoc(doc(db, 'classes', cid, 'assignments', aid, 'submissions', uid))),
+
+      // ---------- Live rooms ----------
+      liveRooms,
+
+      createRoom: (cid, data) =>
+        run(async ({ db, fsMod: { collection, addDoc, serverTimestamp } }) => {
+          const ref = await addDoc(collection(db, 'classes', cid, 'rooms'), { ...data, state: 'lobby', index: 0, host: user.uid, createdAt: serverTimestamp() });
+          return ref.id;
+        }),
+
+      // Host moves the room on. 'question' also stamps the start time.
+      setRoomState: (cid, rid, patch) =>
+        run(({ db, fsMod: { doc, updateDoc, serverTimestamp } }) =>
+          updateDoc(doc(db, 'classes', cid, 'rooms', rid), { ...patch, ...(patch.state === 'question' ? { startedAt: serverTimestamp() } : {}) }),
+        ),
+
+      deleteRoom: (cid, rid) =>
+        run(async ({ db, fsMod: { collection, doc, getDocs, deleteDoc } }) => {
+          const players = await getDocs(collection(db, 'classes', cid, 'rooms', rid, 'players'));
+          await Promise.all(players.docs.map((p) => deleteDoc(p.ref)));
+          await deleteDoc(doc(db, 'classes', cid, 'rooms', rid));
+          return true;
+        }),
+
+      joinRoom: (cid, rid) =>
+        run(async ({ db, fsMod: { doc, getDoc, setDoc, serverTimestamp } }) => {
+          const ref = doc(db, 'classes', cid, 'rooms', rid, 'players', user.uid);
+          const existing = await getDoc(ref);
+          if (!existing.exists()) await setDoc(ref, { name: progress.name.slice(0, 24), avatar: progress.avatar, score: 0, answers: {}, joinedAt: serverTimestamp() });
+          return true;
+        }),
+
+      answerRoom: (cid, rid, index, answer, integrity) =>
+        run(({ db, fsMod: { doc, updateDoc, increment } }) =>
+          updateDoc(doc(db, 'classes', cid, 'rooms', rid, 'players', user.uid), {
+            [`answers.${index}`]: answer,
+            score: increment(answer.points),
+            ...integrity,
+          }),
+        ),
+
       deleteClass: (cid) =>
         run(async ({ db, fsMod: { collection, doc, getDocs, deleteDoc } }) => {
           const members = await getDocs(collection(db, 'classes', cid, 'members'));
@@ -333,7 +475,7 @@ export function SocialProvider({ children }) {
           return true;
         }),
     }),
-    [ready, user, error, requests, friends, challenges, run, progress.name, progress.avatar, progress.xp, classes, teaching, statsKey, fb],
+    [ready, user, error, requests, friends, challenges, run, progress.name, progress.avatar, progress.xp, classes, teaching, statsKey, fb, assignments, mySubs, liveRooms],
   );
 
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>;

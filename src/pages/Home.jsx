@@ -10,6 +10,7 @@ import { Flame, RankBadge } from '../art/Icons.jsx';
 import { BlobBuddy, BlobFrame, BunnyBuddy, CloudEdge, CurlyArrow, FlowerFrame, LoopArrow, Sparks, Squiggle } from '../art/Decor.jsx';
 import { StreakLostOverlay } from '../components/Effects.jsx';
 import { InstallCard } from '../components/AppSettings.jsx';
+import { useSocial } from '../lib/social.jsx';
 import { BADGES, useProgress } from '../game/progress.jsx';
 import { MODES, MODE_BY_ID } from '../game/modes.js';
 import { todayKey } from '../game/rng.js';
@@ -63,6 +64,8 @@ function Welcome({ onDone }) {
 
 export default function Home() {
   const p = useProgress();
+  const social = useSocial();
+  const todo = social.assignments.filter((a) => a.status !== 'closed' && social.mySubs[a.id]?.status !== 'done');
   const [intro, setIntro] = useState(!p.seenIntro);
   const dailyDone = p.dailyDone === todayKey();
   const { rank } = p;
@@ -142,6 +145,28 @@ export default function Home() {
       </section>
 
       <div className="install-wrap">
+        {social.liveRooms.map((r) => (
+          <Link key={r.id} to={`/class/${r.cid}/room/${r.id}`} className="card live-banner">
+            <span className="live-dot" aria-hidden="true" />
+            <span className="grow">
+              <strong>Live now: {r.title}</strong>
+              <span className="small"> · {r.className}</span>
+            </span>
+            <span className="btn coral small">Join live game</span>
+          </Link>
+        ))}
+        {todo.length > 0 && (
+          <Link to="/classes" className="card todo-banner">
+            <OrganelleIcon id="golgi" size={40} />
+            <span className="grow">
+              <strong>
+                {todo.length} assignment{todo.length === 1 ? '' : 's'} to do
+              </strong>
+              <span className="muted small"> · next: {todo[0].title}</span>
+            </span>
+            <span aria-hidden="true">→</span>
+          </Link>
+        )}
         <InstallCard />
       </div>
 

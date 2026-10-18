@@ -61,16 +61,24 @@ export default function Alerts() {
         const verdict = c.toScore > c.fromScore ? `${c.toName} won` : c.toScore === c.fromScore ? 'It’s a draw' : 'You won';
         fresh.push({ id: `res-${c.id}`, icon: 'golgi', title: 'Duel finished!', body: `${verdict}: you ${c.fromScore} – ${c.toScore} ${c.toName}.`, to: '/friends' });
       });
+    social.liveRooms.forEach((r) =>
+      fresh.push({ id: `room-${r.id}`, icon: 'mitochondrion', title: `Live game: ${r.title}`, body: `${r.className} is playing now — tap to join!`, to: `/class/${r.cid}/room/${r.id}` }),
+    );
+    social.assignments
+      // Wait until we know whether it's already done (a.id in mySubs).
+      .filter((a) => a.status !== 'closed' && a.id in social.mySubs && social.mySubs[a.id]?.status !== 'done')
+      .forEach((a) => fresh.push({ id: `as-${a.id}`, icon: 'golgi', title: `New assignment: ${a.title}`, body: `From ${a.className}${a.dueAt ? ' — check the due date' : ''}.`, to: `/class/${a.cid}/a/${a.id}` }));
     const news = fresh.filter((t) => !seen.current.has(t.id));
     if (!news.length) return;
     news.forEach((t) => seen.current.add(t.id));
     saveSeen(seen.current);
     news.slice(-3).forEach(push);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [social.user, social.requests, social.challenges]);
+  }, [social.user, social.requests, social.challenges, social.liveRooms, social.assignments, social.mySubs]);
 
   // Number badge on the installed app icon.
-  const pending = social.requests.length + social.challenges.incoming.filter((c) => c.status === 'open').length;
+  const todo = social.assignments.filter((a) => a.status !== 'closed' && social.mySubs[a.id]?.status !== 'done').length;
+  const pending = social.requests.length + social.challenges.incoming.filter((c) => c.status === 'open').length + todo + social.liveRooms.length;
   useEffect(() => setAppBadge(pending), [pending]);
 
   // Share streak info with the service worker for background reminders.

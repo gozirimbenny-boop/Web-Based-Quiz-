@@ -2,7 +2,7 @@
 // create classes and see a live dashboard of their students' progress and
 // the questions the class gets wrong most often.
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Mascot from '../art/Mascot.jsx';
 import OrganelleIcon from '../art/OrganelleIcon.jsx';
 import { RankBadge } from '../art/Icons.jsx';
@@ -11,6 +11,8 @@ import { useSocial } from '../lib/social.jsx';
 import { rankFor } from '../game/progress.jsx';
 import { exists, summary } from '../game/catalog.js';
 import { friendlyAuthError } from './Friends.jsx';
+import { STATUS_LABEL, fmtDue, statusOf } from './Assignment.jsx';
+import ActivityBuilder from '../components/ActivityBuilder.jsx';
 
 const ago = (ts) => {
   if (!ts?.seconds) return '—';
@@ -129,6 +131,83 @@ function Dashboard({ cls }) {
   );
 }
 
+function TeacherAssignments({ cls }) {
+  const social = useSocial();
+  const [list, setList] = useState([]);
+  const [creating, setCreating] = useState(false);
+  useEffect(() => social.watch(['classes', cls.id, 'assignments'], setList), [cls.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const sorted = [...list].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+  return (
+    <div className="tab-body">
+      {creating ? (
+        <ActivityBuilder
+          onCancel={() => setCreating(false)}
+          onCreate={async (data) => {
+            const id = await social.createAssignment(cls.id, data);
+            if (id) setCreating(false);
+          }}
+        />
+      ) : (
+        <button className="btn coral" onClick={() => setCreating(true)}>
+          + New assignment
+        </button>
+      )}
+      {sorted.length === 0 && !creating && <p className="muted">No assignments yet.</p>}
+      {sorted.map((a) => (
+        <Link key={a.id} to={`/class/${cls.id}/a/${a.id}`} className="person-row todo-row">
+          <OrganelleIcon id="golgi" size={30} />
+          <span className="grow">
+            <strong>{a.title}</strong>
+            <span className="muted small">
+              {' '}
+              · {a.questionIds.length} questions · due {fmtDue(a.dueAt)}
+            </span>
+          </span>
+          <span className={`chip ${a.status === 'closed' ? 'status-missing' : 'status-done'}`}>{a.status === 'closed' ? 'Closed' : 'Open'}</span>
+          <span className="btn small ghost">Report →</span>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+function TeacherLive({ cls }) {
+  const social = useSocial();
+  const navigate = useNavigate();
+  const [rooms, setRooms] = useState([]);
+  const [creating, setCreating] = useState(false);
+  useEffect(() => social.watch(['classes', cls.id, 'rooms'], setRooms), [cls.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <div className="tab-body">
+      {creating ? (
+        <ActivityBuilder
+          live
+          onCancel={() => setCreating(false)}
+          onCreate={async (data) => {
+            const id = await social.createRoom(cls.id, { title: data.title, questionIds: data.questionIds, seed: data.seed, timePer: data.timePer || 20, config: data.config });
+            if (id) navigate(`/class/${cls.id}/room/${id}`);
+          }}
+        />
+      ) : (
+        <button className="btn coral" onClick={() => setCreating(true)}>
+          + Start a live game
+        </button>
+      )}
+      <p className="muted small">Tip: open the game on a projector or big screen. Students join from their own phones.</p>
+      {rooms.map((r) => (
+        <Link key={r.id} to={`/class/${cls.id}/room/${r.id}`} className="person-row todo-row">
+          <OrganelleIcon id="mitochondrion" size={30} />
+          <span className="grow">
+            <strong>{r.title}</strong>
+            <span className="muted small"> · {r.questionIds.length} questions</span>
+          </span>
+          <span className={`chip ${r.state === 'ended' ? 'status-done' : 'status-started'}`}>{r.state === 'ended' ? 'Finished — see results' : r.state === 'lobby' ? 'Waiting room' : 'In progress'}</span>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
 export default function Classes() {
   const social = useSocial();
   const [code, setCode] = useState('');
@@ -199,6 +278,41 @@ export default function Classes() {
         ))}
       </section>
 
+      {social.liveRooms.map((r) => (
+        <Link key={r.id} to={`/class/${r.cid}/room/${r.id}`} className="card live-banner">
+          <span className="live-dot" aria-hidden="true" />
+          <span className="grow">
+            <strong>Live now: {r.title}</strong>
+            <span className="small"> · {r.className}</span>
+          </span>
+          <span className="btn coral small">Join live game</span>
+        </Link>
+      ))}
+
+      {social.assignments.length > 0 && (
+        <section className="card">
+          <h3>My assignments</h3>
+          {social.assignments.map((a) => {
+            const status = statusOf(a, social.mySubs[a.id]);
+            const sub = social.mySubs[a.id];
+            return (
+              <Link key={a.id} to={`/class/${a.cid}/a/${a.id}`} className={`person-row todo-row ${a.status === 'closed' ? 'closed' : ''}`}>
+                <OrganelleIcon id={status === 'done' || status === 'late' ? 'chloroplast' : status === 'missing' ? 'lysosome' : 'mitochondrion'} size={32} />
+                <span className="grow">
+                  <strong>{a.title}</strong>
+                  <span className="muted small">
+                    {' '}
+                    · {a.className} · due {fmtDue(a.dueAt)}
+                    {sub?.status === 'done' && ` · ${sub.score}/${sub.max}`}
+                  </span>
+                </span>
+                <span className={`chip status-${status}`}>{a.status === 'closed' && status !== 'done' ? 'Closed' : STATUS_LABEL[status]}</span>
+              </Link>
+            );
+          })}
+        </section>
+      )}
+
       <section className="card">
         <h3>Teach a class</h3>
         <p className="muted small">Create a class, share its code, and follow your students’ progress live.</p>
@@ -222,14 +336,24 @@ export default function Classes() {
             <button className="btn small ghost" onClick={() => navigator.clipboard?.writeText(c.code)}>
               Copy code
             </button>
-            <button className="btn small coral" onClick={() => setOpen(open === c.id ? null : c.id)}>
-              {open === c.id ? 'Hide dashboard' : 'Open dashboard'}
-            </button>
             <button className="btn small ghost danger" onClick={() => window.confirm(`Delete ${c.name}? Students will be removed from it.`) && social.deleteClass(c.id)}>
               Delete
             </button>
           </div>
-          {open === c.id && <Dashboard cls={c} />}
+          <div className="segmented wide class-tabs" role="tablist">
+            {[
+              ['students', 'Students'],
+              ['assignments', 'Assignments'],
+              ['live', 'Live games'],
+            ].map(([id, label]) => (
+              <button key={id} role="tab" aria-selected={open?.cid === c.id && open.tab === id} className={open?.cid === c.id && open.tab === id ? 'on' : ''} onClick={() => setOpen(open?.cid === c.id && open.tab === id ? null : { cid: c.id, tab: id })}>
+                {label}
+              </button>
+            ))}
+          </div>
+          {open?.cid === c.id && open.tab === 'students' && <Dashboard cls={c} />}
+          {open?.cid === c.id && open.tab === 'assignments' && <TeacherAssignments cls={c} />}
+          {open?.cid === c.id && open.tab === 'live' && <TeacherLive cls={c} />}
         </section>
       ))}
 

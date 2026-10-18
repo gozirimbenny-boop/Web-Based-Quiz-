@@ -209,6 +209,8 @@ export function summary(id) {
       const [, cell, part] = id.split('-');
       return { prompt: `Find the ${nameOf(part)} on the ${cell} cell`, answer: nameOf(part), explain: ORGANELLE_BY_ID[part].fn };
     }
+    if (id.startsWith('mt-')) return { prompt: `Match the Function board ${Number(id.split('-')[2]) + 1}`, answer: '', explain: '' };
+    if (id.startsWith('bd-')) return { prompt: `Build-a-Cell: ${id.slice(3)} cell`, answer: '', explain: '' };
     return { prompt: id, answer: '', explain: '' };
   }
   const p = prefixOf(id);
@@ -221,3 +223,74 @@ export function summary(id) {
   if (p === 'ab') return { prompt: `A. ${q.a} B. ${q.b}`, answer: `A. ${q.ansA} B. ${q.ansB}`, explain: '' };
   return { prompt: id, answer: '', explain: '' };
 }
+
+// ---------- Topics (for teacher activities) ----------
+// Which organelles a question is about. Uses the explicit field where the
+// bank has one, otherwise looks for organelle names in the question text.
+const KEYWORDS = {
+  nucleus: /\bnucle(us|i)\b|\bDNA\b|nuclear/i,
+  nucleolus: /nucleol/i,
+  mitochondrion: /mitochondri|\bATP\b|respiration/i,
+  ribosome: /ribosom|protein synth/i,
+  roughER: /rough (ER|endoplasmic)/i,
+  smoothER: /smooth (ER|endoplasmic)|detoxif|lipid/i,
+  golgi: /golgi/i,
+  lysosome: /lysosom|digestive enzyme/i,
+  vesicle: /vesicle/i,
+  cellMembrane: /membrane|osmosis|permeable|hypotonic/i,
+  cytoplasm: /cytoplasm|cytosol|glycolysis/i,
+  cytoskeleton: /cytoskeleton|microtubule|microfilament|filament/i,
+  centrosome: /centr(iole|osome)/i,
+  chloroplast: /chloroplast|chlorophyll|photosynth/i,
+  cellWall: /cell wall|cellulose/i,
+  vacuole: /vacuole|turgor/i,
+};
+
+// Wrong answer options don't count (a Golgi question that lists
+// "Chloroplast" as a distractor isn't about chloroplasts) — except in Odd
+// One Out, where all the options are the content.
+const textOf = (q, p) =>
+  [q.q, q.a, q.b, q.ansA, q.ansB, q.explain, q.word, ...(p === 'od' ? q.choices : typeof q.answer === 'number' && q.choices ? [q.choices[q.answer]] : [])]
+    .filter(Boolean)
+    .join(' ');
+
+export function topicsOf(id) {
+  const p = prefixOf(id);
+  if (p === 'lbl') return [id.split('-')[2]];
+  if (p === 'bd') return BUILDS[id === 'bd-plant' ? 'plant' : 'animal'].needs;
+  const q = RAW[id];
+  if (!q) return [];
+  const found = new Set();
+  if (q.topic) found.add(q.topic);
+  if (p === 'rd') found.add(q.answer);
+  if (q.organelle) found.add(q.organelle);
+  const text = textOf(q, p);
+  Object.entries(KEYWORDS).forEach(([org, re]) => re.test(text) && found.add(org));
+  return [...found];
+}
+
+// Question types a teacher can filter by, with the pools they come from.
+export const QUESTION_TYPES = [
+  { id: 'mcq', label: 'Multiple choice' },
+  { id: 'tf', label: 'True / false' },
+  { id: 'riddle', label: 'Riddles' },
+  { id: 'scramble', label: 'Scrambles' },
+  { id: 'fill', label: 'Fill the gap' },
+  { id: 'odd', label: 'Odd one out' },
+  { id: 'sort', label: 'Plant / animal / both' },
+  { id: 'label', label: 'Label the diagram' },
+  { id: 'twoPart', label: 'Two-part (written)' },
+];
+
+// Every question id in the bank (Build-a-Cell and Match are generated
+// per round, so they're picked through game modes instead).
+export const ALL_IDS = QUESTION_TYPES.flatMap((t) => POOLS[t.id]);
+export const typeOf = (id) => QUESTION_TYPES.find((t) => POOLS[t.id].includes(id))?.id;
+
+// Live rooms show one answer grid to everyone, so only "pick an answer"
+// questions work there.
+export const isChoiceQuestion = (id) => {
+  const p = prefixOf(id);
+  if (p === 'lbl') return id.endsWith('-name');
+  return ['mc', 'tf', 'rd', 'fb', 'od', 'pa'].includes(p);
+};

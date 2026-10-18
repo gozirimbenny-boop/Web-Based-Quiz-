@@ -19,7 +19,7 @@ export default function Layout() {
   const p = useProgress();
   const social = useSocial();
   const { pathname } = useLocation();
-  const inGame = /^\/play\/.+/.test(pathname);
+  const inGame = /^\/play\/.+|^\/class\/.+\/(room|a)\//.test(pathname);
   const pending = social.requests.length + social.challenges.incoming.filter((c) => c.status === 'open').length;
 
   return (
