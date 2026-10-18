@@ -104,14 +104,26 @@ export function SocialProvider({ children }) {
     return () => unsubs.forEach((u) => u());
   }, [fb, user]);
 
+  // A clean slate after signing in or out (e.g. drop a stale popup error).
+  useEffect(() => setError(''), [user]);
+
   const run = useCallback(
     async (fn) => {
       setError('');
+      let timer;
       try {
-        return await fn(fb);
+        // If the database can't be reached, Firestore retries forever;
+        // give up after 15s so the player sees a message instead of a spinner.
+        const timeout = new Promise((_, reject) => {
+          timer = setTimeout(() => reject(new Error('Couldn’t reach the online database. Check your connection and try again.')), 15000);
+        });
+        return await Promise.race([fn(fb), timeout]);
       } catch (e) {
-        setError(e.message.replace('Firebase: ', ''));
+        // Closing the Google window (or double-clicking) isn't an error.
+        if (!/popup-closed-by-user|cancelled-popup-request/.test(e.code || e.message)) setError(e.message.replace('Firebase: ', ''));
         return null;
+      } finally {
+        clearTimeout(timer);
       }
     },
     [fb],

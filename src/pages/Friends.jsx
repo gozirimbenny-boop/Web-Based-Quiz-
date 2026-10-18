@@ -35,6 +35,7 @@ function friendlyAuthError(msg) {
   if (msg.includes('admin-restricted-operation') || msg.includes('operation-not-allowed'))
     return 'This sign-in method isn’t switched on yet (site owner: enable it under Firebase → Authentication → Sign-in method).';
   if (msg.includes('network-request-failed')) return 'No internet connection. Check your connection and try again.';
+  if (msg.includes('Missing or insufficient permissions')) return 'The online database refused this action (site owner: check the Firestore rules are published).';
   return msg;
 }
 
@@ -153,7 +154,7 @@ export default function Friends() {
 
       {social.error && (
         <p className="error-msg" role="alert">
-          {social.error} <button className="link" onClick={social.clearError}>Dismiss</button>
+          {friendlyAuthError(social.error)} <button className="link" onClick={social.clearError}>Dismiss</button>
         </p>
       )}
 
