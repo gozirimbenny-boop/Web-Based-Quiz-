@@ -62,7 +62,7 @@ export default function Layout() {
       <main className="main">
         <Outlet />
       </main>
-      <Alerts />
+      <Alerts quiet={inGame} />
 
       {!inGame && (
         <footer className="footer">

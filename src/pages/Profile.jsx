@@ -3,11 +3,14 @@ import OrganelleIcon from '../art/OrganelleIcon.jsx';
 import { RankBadge } from '../art/Icons.jsx';
 import { FlowerFrame } from '../art/Decor.jsx';
 import { InstallCard, NotificationSetting } from '../components/AppSettings.jsx';
+import { useSocial } from '../lib/social.jsx';
 import { BADGES, RANKS, useProgress } from '../game/progress.jsx';
 import { AvatarPicker } from './Home.jsx';
 
 export default function Profile() {
   const p = useProgress();
+  const social = useSocial();
+  const [note, setNote] = useState('');
   const [name, setName] = useState(p.name);
   const accuracy = p.answered ? Math.round((p.correct / p.answered) * 100) : 0;
 
@@ -95,12 +98,26 @@ export default function Profile() {
         <label className="toggle">
           <input type="checkbox" checked={!p.muted} onChange={(e) => p.update({ muted: !e.target.checked })} /> Sound effects
         </label>
-        <button
-          className="btn ghost small danger"
-          onClick={() => window.confirm('Reset all progress on this device? This cannot be undone.') && p.reset()}
-        >
-          Reset my progress
-        </button>
+        <div className="row gap wrap">
+          <button
+            className="btn ghost small danger"
+            onClick={() => window.confirm('Reset all progress on this device? This cannot be undone.') && p.reset()}
+          >
+            Reset my progress
+          </button>
+          {social.user && (
+            <button
+              className="btn ghost small danger"
+              onClick={async () => {
+                if (!window.confirm('Delete your online account? This removes your profile, friends and class memberships. It cannot be undone.')) return;
+                if (await social.deleteAccount()) setNote('Your online account was deleted.');
+              }}
+            >
+              Delete my online account
+            </button>
+          )}
+        </div>
+        {(note || social.error) && <p className={note ? 'note-msg' : 'error-msg'}>{note || social.error}</p>}
       </section>
     </div>
   );

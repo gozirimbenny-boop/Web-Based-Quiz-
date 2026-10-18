@@ -29,7 +29,9 @@ const saveSeen = (set) => {
   }
 };
 
-export default function Alerts() {
+// quiet: true while a game/activity is on screen. New alerts then wait
+// (they aren't marked as seen) so they never cover answer buttons.
+export default function Alerts({ quiet = false }) {
   const p = useProgress();
   const social = useSocial();
   const { ready: updateReady, update } = useUpdateAvailable();
@@ -45,7 +47,7 @@ export default function Alerts() {
 
   // New friend requests, challenges and duel results — each announced once.
   useEffect(() => {
-    if (!social.user) return;
+    if (!social.user || quiet) return;
     const fresh = [];
     social.requests.forEach((r) =>
       fresh.push({ id: `req-${r.id}`, icon: r.fromAvatar || 'vesicle', title: 'New friend request', body: `${r.fromName} wants to be friends.`, to: '/friends' }),
@@ -74,7 +76,12 @@ export default function Alerts() {
     saveSeen(seen.current);
     news.slice(-3).forEach(push);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [social.user, social.requests, social.challenges, social.liveRooms, social.assignments, social.mySubs]);
+  }, [social.user, social.requests, social.challenges, social.liveRooms, social.assignments, social.mySubs, quiet]);
+
+  // Entering a game hides any toasts already showing.
+  useEffect(() => {
+    if (quiet) setToasts([]);
+  }, [quiet]);
 
   // Number badge on the installed app icon.
   const todo = social.assignments.filter((a) => a.status !== 'closed' && social.mySubs[a.id]?.status !== 'done').length;
@@ -90,12 +97,12 @@ export default function Alerts() {
   useEffect(() => {
     const today = todayKey();
     const key = `streak-${today}`;
-    if (p.daily.last === today || p.daily.streak === 0 || new Date().getHours() < 16 || seen.current.has(key)) return;
+    if (quiet || p.daily.last === today || p.daily.streak === 0 || new Date().getHours() < 16 || seen.current.has(key)) return;
     seen.current.add(key);
     saveSeen(seen.current);
     push({ id: key, icon: 'mitochondrion', title: `Keep your ${p.daily.streak}-day streak alive! 🔥`, body: 'Play any round today — the Daily Challenge takes about 3 minutes.', to: '/play/daily' });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [p.daily.last, p.daily.streak]);
+  }, [p.daily.last, p.daily.streak, quiet]);
 
   return (
     <div className="toasts alerts" aria-live="polite">

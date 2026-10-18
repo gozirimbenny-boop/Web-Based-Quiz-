@@ -51,6 +51,18 @@ Under **Classes** (or **Friends → Classes** on phones):
 - **Teachers** create a class and get a 6-character join code. The live dashboard shows each student's XP, rank, rounds, accuracy, streaks and last activity, plus the class's **most-missed questions**. It can be downloaded as a spreadsheet (CSV).
 - **Students** enter the code to join. They are told that the teacher will see their name, progress and missed questions.
 
+### Assignments
+
+In a class, open **Assignments → New assignment**. Choose questions from a **game mode**, **by topic** (organelles + question types) or **hand-pick** them from the bank. Optional: a **study first** step (organelle cards to read before the quiz unlocks), a due date and a time limit per question. Under *More options*: shuffle questions per student, allow retakes. By default everyone gets the same questions.
+
+Students see exactly what is tracked before they start. The live report shows who is done, in progress, not started, late or missing; scores, time taken and answer speed; a question-by-question breakdown; sorting; and CSV export.
+
+**Integrity signals:** leaving the page/app (count and time away), copy/paste, correct answers right after returning to the page, very fast guessing and restarts. These are shown as levels (No concerns / Minor / Check / Review) and are **clues, not proof**. No website can reliably detect AI use, so talk to the student first.
+
+### Live games
+
+In a class, open **Live games → Start a live game**, choose questions (pick-an-answer types only) and the time per question, and show the room on a projector. Students tap **Join live game** on their phones. The flow is: lobby → timed question (faster correct answers score more) → reveal with answer breakdown and top 5 → podium, plus a results table with integrity signals.
+
 ## Editing questions (no coding needed)
 
 - **All questions:** [`src/data/questions.js`](src/data/questions.js)

@@ -218,7 +218,11 @@ function StudentAssignment({ cid, a }) {
         <span className="chip">{a.questionIds.length} questions</span>
         <span className="chip">{a.timePer ? `${a.timePer}s per question` : 'No time limit'}</span>
         <span className="chip">Due: {fmtDue(a.dueAt)}</span>
-        {a.study?.length > 0 && <span className="chip">Study step: {a.study.length} cards</span>}
+        {a.study?.length > 0 && (
+          <span className="chip">
+            Study step: {a.study.length} card{a.study.length === 1 ? '' : 's'}
+          </span>
+        )}
         <span className={`chip status-${status}`}>{STATUS_LABEL[status]}</span>
       </div>
 

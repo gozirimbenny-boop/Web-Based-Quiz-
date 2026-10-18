@@ -467,6 +467,31 @@ export function SocialProvider({ children }) {
           }),
         ),
 
+      // Removes everything this player has online: class memberships,
+      // friend links, profile, then the sign-in account itself. (Their
+      // answers inside a teacher's assignments stay with the teacher.)
+      deleteAccount: () =>
+        run(async ({ db, auth, authMod, fsMod: { collection, doc, getDocs, deleteDoc } }) => {
+          for (const cid of classIds) await deleteDoc(doc(db, 'classes', cid, 'members', user.uid)).catch(() => {});
+          const fr = await getDocs(collection(db, 'users', user.uid, 'friends'));
+          for (const f of fr.docs) {
+            await deleteDoc(doc(db, 'users', f.id, 'friends', user.uid)).catch(() => {});
+            await deleteDoc(f.ref);
+          }
+          await deleteDoc(doc(db, 'users', user.uid));
+          try {
+            await authMod.deleteUser(auth.currentUser);
+          } catch (e) {
+            // Google accounts must have signed in recently to be deleted.
+            if (String(e.code).includes('requires-recent-login')) {
+              await authMod.signOut(auth);
+              throw new Error('Your data was deleted. To remove the sign-in itself, sign in again and press Delete once more.');
+            }
+            throw e;
+          }
+          return true;
+        }),
+
       deleteClass: (cid) =>
         run(async ({ db, fsMod: { collection, doc, getDocs, deleteDoc } }) => {
           const members = await getDocs(collection(db, 'classes', cid, 'members'));
@@ -475,7 +500,7 @@ export function SocialProvider({ children }) {
           return true;
         }),
     }),
-    [ready, user, error, requests, friends, challenges, run, progress.name, progress.avatar, progress.xp, classes, teaching, statsKey, fb, assignments, mySubs, liveRooms],
+    [ready, user, error, requests, friends, challenges, run, progress.name, progress.avatar, progress.xp, classes, classIds, teaching, statsKey, fb, assignments, mySubs, liveRooms],
   );
 
   return <Ctx.Provider value={api}>{children}</Ctx.Provider>;
